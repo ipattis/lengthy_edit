@@ -23,27 +23,30 @@ def load_dotenv(path: Path) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    ap = argparse.ArgumentParser(prog="lengthy-edit", description=__doc__)
-    ap.add_argument("--home", help="workspace folder for projects (default: ./projects or $LENGTHY_EDIT_HOME)")
+    # --home works before or after the subcommand.
+    common = argparse.ArgumentParser(add_help=False)
+    common.add_argument("--home", default=argparse.SUPPRESS,
+                        help="workspace folder for projects (default: ./projects or $LENGTHY_EDIT_HOME)")
+    ap = argparse.ArgumentParser(prog="lengthy-edit", description=__doc__, parents=[common])
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    s = sub.add_parser("serve", help="run the local web UI")
+    s = sub.add_parser("serve", help="run the local web UI", parents=[common])
     s.add_argument("--host", default="127.0.0.1")
     s.add_argument("--port", type=int, default=8765)
     s.add_argument("--no-browser", action="store_true")
     s.add_argument("--reload", action="store_true", help="auto-reload on code changes (dev)")
 
-    n = sub.add_parser("new", help="create a project")
+    n = sub.add_parser("new", help="create a project", parents=[common])
     n.add_argument("title")
 
-    sub.add_parser("list", help="list projects")
+    sub.add_parser("list", help="list projects", parents=[common])
 
-    r = sub.add_parser("render", help="render a project to mp4")
+    r = sub.add_parser("render", help="render a project to mp4", parents=[common])
     r.add_argument("slug")
 
     args = ap.parse_args(argv)
     load_dotenv(Path.cwd() / ".env")
-    if args.home:
+    if getattr(args, "home", None):
         os.environ["LENGTHY_EDIT_HOME"] = str(Path(args.home).expanduser().resolve())
 
     from . import store

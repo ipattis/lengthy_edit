@@ -77,6 +77,13 @@ def _call(
             if msg.stop_reason == "max_tokens":
                 raise ClaudeError("Output hit max_tokens; try a shorter target duration.")
             break
+    except TypeError as e:
+        # Raised by the SDK before sending when no credential is configured.
+        if "authentication" not in str(e).lower():
+            raise
+        raise ClaudeError(
+            "No Anthropic credentials found. Set ANTHROPIC_API_KEY in .env (then restart) or run `ant auth login`."
+        ) from e
     except anthropic.AuthenticationError as e:
         raise ClaudeError(
             "Anthropic authentication failed. Set ANTHROPIC_API_KEY or run `ant auth login`."

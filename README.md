@@ -17,15 +17,20 @@ the workflow behind [*Working as Intended*](https://www.youtube.com/watch?v=Z6_E
 | Motion-design frames | local | `title` shots render as typographic cards with fades |
 | Cut | **ffmpeg** | Renders an animatic (placeholder cards for missing assets) at any time, then the final film. Segments are cached, so re-rendering a long edit only re-encodes changed shots |
 
-Midjourney and Suno don't have official public APIs, so those steps are copy-prompt / upload-result.
-Everything else is automated.
+**What's automated vs. manual:** Claude stages, Seedance generation, timing, mixing and rendering are
+automated. Midjourney and Suno have no official public APIs, so those steps are *copy the prompt → generate
+in their app → upload the result*. Sound-effect files for the cues are also yours to source (a library,
+your own foley, or any generator).
+
+**Costs:** every "Generate with Claude" click is a paid Anthropic API call (Opus at high effort; research
+with web search is the most expensive stage). Each Seedance shot is billed by Higgsfield.
 
 ## Install
 
 Requires Python ≥ 3.10 and `ffmpeg`/`ffprobe` on `PATH` (`brew install ffmpeg`).
 
 ```bash
-git clone <this repo> && cd lengthy_edit
+git clone https://github.com/<you>/lengthy-edit.git && cd lengthy-edit
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env    # fill in keys
@@ -43,7 +48,8 @@ Optional: `LENGTHY_EDIT_MODEL` (default `claude-opus-5-5`), `LENGTHY_EDIT_EFFORT
 `HIGGSFIELD_SEEDANCE_MODEL` (default `bytedance/seedance-2.0`), `HIGGSFIELD_RESOLUTION` (default `1080p`),
 `LENGTHY_EDIT_HOME` (project folder, default `./projects`).
 
-`.env` in the working directory is loaded automatically; real environment variables win.
+`.env` in the directory you run `lengthy-edit` from is loaded at startup (restart after editing it);
+real environment variables win. The sidebar shows which services are configured.
 
 ## Workflow
 
@@ -56,13 +62,15 @@ Optional: `LENGTHY_EDIT_MODEL` (default `claude-opus-5-5`), `LENGTHY_EDIT_EFFORT
    - `motion`: upload the Midjourney still, then click **Seedance** (or *Seedance all missing*).
    - `title`: edit the on-screen text; rendered locally.
    Use **Refine with Claude** for director's notes on a single shot, and **Fit to song** after manual timing edits.
+   Seedance shots are 4–15 s; longer motion shots are clamped. Outputs are downloaded into the project
+   immediately (Higgsfield deletes them after ~7 days).
 5. **Sound layer**: generate cues, attach sound files, set gain.
 6. **Render**: animatic first, final once every shot has an asset.
 
 ## CLI
 
 ```bash
-lengthy-edit serve [--port 8765] [--home DIR] [--no-browser]
+lengthy-edit serve [--port 8765] [--home DIR] [--no-browser] [--reload]
 lengthy-edit new "My Film"
 lengthy-edit list
 lengthy-edit render my-film      # headless render
@@ -78,6 +86,16 @@ projects/<slug>/
 ```
 
 `project.json` is plain, diffable JSON. Media stays out of git by default (`projects/` is ignored).
+
+## Status and limitations
+
+- Tested: storage, timeline maths, API endpoints, uploads, and the full ffmpeg render (stills with push-in,
+  looped videos, title cards, placeholders, song + cue mix) via `pytest` and an end-to-end run against the server.
+- **Not yet verified against live services:** Claude generation (request shape checked against a mock server only)
+  and Higgsfield/Seedance (implemented from their published API docs). Expect prompt tuning on first real use.
+- Single-user local tool: no auth, binds to `127.0.0.1`. Don't expose it on a network.
+- Cuts are hard cuts (no transitions yet). Background tasks live in memory; restarting the server drops
+  in-flight task status (a Seedance job already submitted keeps running at Higgsfield but won't be downloaded).
 
 ## Development
 
