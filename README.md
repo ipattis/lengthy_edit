@@ -30,7 +30,7 @@ with web search is the most expensive stage). Each Seedance shot is billed by Hi
 Requires Python ≥ 3.10 and `ffmpeg`/`ffprobe` on `PATH` (`brew install ffmpeg`).
 
 ```bash
-git clone https://github.com/<you>/lengthy-edit.git && cd lengthy-edit
+git clone https://github.com/ipattis/lengthy_edit.git && cd lengthy_edit
 python3 -m venv .venv && source .venv/bin/activate
 pip install -e ".[dev]"
 cp .env.example .env    # fill in keys
