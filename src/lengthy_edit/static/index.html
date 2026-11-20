@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>lengthy-edit</title>
+  <link rel="stylesheet" href="/static/style.css" />
+</head>
+<body>
+  <aside id="sidebar">
+    <h1>lengthy<span>edit</span></h1>
+    <form id="new-project">
+      <input name="title" placeholder="New film title…" autocomplete="off" />
+      <button>Create</button>
+    </form>
+    <ul id="projects"></ul>
+    <div id="health"></div>
+  </aside>
+
+  <main>
+    <header id="topbar" hidden>
+      <h2 id="project-title"></h2>
+      <nav id="tabs">
+        <button data-tab="brief">1 · Brief</button>
+        <button data-tab="research">2 · Research</button>
+        <button data-tab="lyrics">3 · Lyrics &amp; Song</button>
+        <button data-tab="storyboard">4 · Storyboard &amp; Assets</button>
+        <button data-tab="sound">5 · Sound layer</button>
+        <button data-tab="render">6 · Render</button>
+      </nav>
+      <div id="tasks"></div>
+    </header>
+    <section id="view">
+      <div class="empty">
+        <h2>Make a song-length AI film</h2>
+        <p>Pipeline: <b>Claude</b> for research, lyrics, storyboard, prompts and sound layer →
+          <b>Suno</b> for the song → <b>Midjourney</b> for stills and loops →
+          <b>Seedance</b> (via Higgsfield) for motion shots → <b>ffmpeg</b> to cut it all to the music.</p>
+        <p>Create or pick a project on the left.</p>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast"></div>
+  <script src="/static/app.js"></script>
+</body>
+</html>

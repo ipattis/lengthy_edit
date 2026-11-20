@@ -1,0 +1,15 @@
+# local environment
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.env
+.claude-flow/
+.DS_Store
+
+# project workspaces (media is large; commit project.json selectively if you want)
+projects/
+.swarm/
