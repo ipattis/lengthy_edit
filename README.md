@@ -1,8 +1,9 @@
 # lengthy-edit
 
-A local web UI and Python package for producing **song-length AI music films**, modelled on
-the workflow behind [*Working as Intended*](https://www.youtube.com/watch?v=Z6_ENp_fO_Y)
-([reference](docs/workflow-reference.png)):
+A local web UI and Python package for producing **song-length AI music films**: long-form
+edits of the kind seen in [*Working as Intended*](https://www.youtube.com/watch?v=Z6_ENp_fO_Y).
+It's built around a toolchain that suits this type of edit. That's a common approach, not a
+record of how any particular film was made:
 
 | Stage | Tool | In lengthy-edit |
 |---|---|---|

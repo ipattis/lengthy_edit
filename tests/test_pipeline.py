@@ -29,11 +29,11 @@ def client():
 
 
 def test_create_and_slug_collision():
-    a = store.create("Working as Intended!")
-    b = store.create("Working as Intended!")
-    assert a.slug == "working-as-intended"
-    assert b.slug == "working-as-intended-2"
-    assert store.load(a.slug).brief.title == "Working as Intended!"
+    a = store.create("My First Film!")
+    b = store.create("My First Film!")
+    assert a.slug == "my-first-film"
+    assert b.slug == "my-first-film-2"
+    assert store.load(a.slug).brief.title == "My First Film!"
 
 
 def test_safe_path_blocks_traversal():
@@ -103,7 +103,7 @@ def test_render_end_to_end(tmp_path):
     p.shots = claude.normalize_timeline([
         Shot(id="s001", duration_s=2, kind=ShotKind.still, image="media/still.png"),
         Shot(id="s002", duration_s=2, kind=ShotKind.loop, video="media/loop.mp4"),  # 1s clip looped to 2s
-        Shot(id="s003", duration_s=1.5, kind=ShotKind.title, on_screen_text="WORKING AS INTENDED"),
+        Shot(id="s003", duration_s=1.5, kind=ShotKind.title, on_screen_text="CHAPTER ONE"),
         Shot(id="s004", duration_s=1.5, kind=ShotKind.motion, description="missing asset"),
     ], total=7.0)
     p.sound_cues = [SoundCue(id="c001", at_s=2.0, duration_s=0.5, file="media/hit.wav")]

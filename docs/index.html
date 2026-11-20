@@ -602,12 +602,12 @@
     </div>
 
     <div class="ref-card">
-      <img src="workflow-reference.png" alt="Comment listing the tools used to make Working as Intended: Claude, Midjourney, Suno, Seedance via Higgsfield">
-      <p>Modelled on the workflow behind
-        <a href="https://www.youtube.com/watch?v=Z6_ENp_fO_Y" target="_blank" rel="noopener noreferrer"><em>Working as Intended</em></a>:
-        Claude for research, lyrics, storyboard, prompts and the sound layer; Midjourney for images
-        and moving loops; Suno for the song; Seedance for motion shots through Higgsfield's API.
-        lengthy-edit turns that list into one repeatable workspace.</p>
+      <p>Built for long-form AI music films, the kind of lengthy edit seen in
+        <a href="https://www.youtube.com/watch?v=Z6_ENp_fO_Y" target="_blank" rel="noopener noreferrer"><em>Working as Intended</em></a>.
+        The toolchain here suits that type of edit: Claude for research, lyrics, storyboard, prompts
+        and the sound layer; Midjourney for images and moving loops; Suno for the song; Seedance for
+        motion shots through Higgsfield's API. It's one common approach, not a record of how any
+        particular film was made. lengthy-edit turns it into one repeatable workspace.</p>
     </div>
   </div>
 </section>
@@ -718,7 +718,7 @@
     </p>
     <div class="vault-grid">
       <div class="vault-tree">
-<span class="dir">projects/working-as-intended/</span>
+<span class="dir">projects/my-film/</span>
 <span class="dim">├── </span><span class="hl">project.json</span><span class="file">     text, timings, prompts</span>
 <span class="dim">├── </span><span class="dir">song/</span><span class="file">            the Suno take</span>
 <span class="dim">├── </span><span class="dir">shots/</span>
@@ -818,7 +818,7 @@
         <div class="qs-num" data-n="4">Render</div>
         <h4>Cut from the terminal</h4>
 <pre><span class="cmd">lengthy-edit list</span>
-<span class="cmd">lengthy-edit render</span> working-as-intended
+<span class="cmd">lengthy-edit render</span> my-film
 <span class="cmd">pytest</span>                             <span class="cmt"># offline tests, no API calls</span></pre>
         <p class="qs-note">Every Claude generation and Seedance shot is a paid API call. Renders are free.</p>
       </div>
@@ -836,7 +836,6 @@
   <div class="footer-links">
     <a href="https://github.com/ipattis/lengthy_edit">GitHub</a>
     <a href="https://github.com/ipattis/lengthy_edit#readme">README</a>
-    <a href="https://www.youtube.com/watch?v=Z6_ENp_fO_Y">Working as Intended</a>
     <a href="https://docs.higgsfield.ai">Higgsfield API</a>
   </div>
   <p class="footer-copy">MIT License</p>

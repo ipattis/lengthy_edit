@@ -1,6 +1,6 @@
 """Domain model for a lengthy-edit project.
 
-A project moves through the same stages used to make "Working as Intended":
+A project moves through the stages of a typical long-form AI music-film edit:
 
     brief -> research -> lyrics (+ Suno style prompt) -> song (Suno, uploaded)
           -> storyboard (shots) -> assets (Midjourney stills/loops, Seedance motion)
