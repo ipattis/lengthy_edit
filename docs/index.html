@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>lengthy-edit — AI music-film studio</title>
+<meta name="description" content="A local studio for song-length AI music films: Claude for research, lyrics, storyboard, prompts and sound; Suno, Midjourney and Seedance for media; ffmpeg to cut it to the music.">
+<style>
+
+  :root {
+    --bg:       #0b0b14;
+    --bg-2:     #0f0f1c;
+    --bg-3:     #141425;
+    --surface:  #1a1a2e;
+    --border:   rgba(139,92,246,0.18);
+    --border-hi:rgba(139,92,246,0.45);
+    --purple:   #8b5cf6;
+    --violet:   #a78bfa;
+    --blue:     #60a5fa;
+    --teal:     #2dd4bf;
+    --slate:    #94a3b8;
+    --text:     #e2e8f0;
+    --text-dim: #94a3b8;
+    --code-bg:  #131320;
+    --r:        8px;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 2rem;
+    height: 56px;
+    background: rgba(11,11,20,0.82);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+  }
+  .nav-logo {
+    font-size: 1.1rem; font-weight: 700; letter-spacing: .04em;
+    color: var(--text);
+    display: flex; align-items: center; gap: .55rem;
+    text-decoration: none;
+  }
+  .nav-logo svg { flex-shrink: 0; }
+  .nav-links { display: flex; gap: 1.8rem; list-style: none; }
+  .nav-links a {
+    color: var(--text-dim); font-size: .88rem; text-decoration: none;
+    transition: color .2s;
+  }
+  .nav-links a:hover { color: var(--violet); }
+  .nav-cta {
+    font-size: .82rem; font-weight: 600; padding: .42rem 1.1rem;
+    background: rgba(139,92,246,0.15); border: 1px solid var(--border-hi);
+    color: var(--violet); border-radius: 6px; text-decoration: none;
+    transition: background .2s, border-color .2s;
+  }
+  .nav-cta:hover { background: rgba(139,92,246,0.28); border-color: var(--purple); }
+  .nav-right { display: flex; align-items: center; gap: 1.2rem; }
+  .gh-stats  { display: flex; align-items: center; gap: 1rem; }
+  .gh-stat, .gh-link {
+    display: flex; align-items: center; gap: .3rem;
+    color: var(--text-dim); text-decoration: none;
+    transition: color .25s;
+  }
+  .gh-stat:hover, .gh-link:hover { color: var(--text); }
+  .gh-stat svg { width: 15px; height: 15px; }
+  .gh-link svg { width: 20px; height: 20px; }
+  .gh-stat span { font-size: .8rem; font-weight: 500; }
+
+  /* ── HERO ── */
+  #hero {
+    position: relative; min-height: 100vh;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    text-align: center; padding: 7rem 1.5rem 5rem;
+    overflow: hidden;
+  }
+  #hero-canvas {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+  }
+  .hero-label {
+    position: relative; z-index: 1;
+    font-size: .78rem; font-weight: 600; letter-spacing: .15em; text-transform: uppercase;
+    color: var(--teal);
+    background: rgba(45,212,191,0.08); border: 1px solid rgba(45,212,191,0.25);
+    border-radius: 100px; padding: .32rem 1rem; display: inline-block; margin-bottom: 2rem;
+  }
+  .hero-title {
+    position: relative; z-index: 1;
+    font-size: clamp(3rem, 8vw, 6.5rem);
+    font-weight: 800; line-height: 1.04; letter-spacing: -.03em;
+    background: linear-gradient(135deg, #fff 20%, var(--violet) 55%, var(--teal) 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 1.6rem;
+  }
+  .hero-title em { font-style: normal; }
+  .hero-sub {
+    position: relative; z-index: 1;
+    font-size: clamp(1rem, 2.5vw, 1.3rem); font-weight: 400;
+    color: var(--slate); max-width: 640px; margin: 0 auto 3rem;
+    line-height: 1.7;
+  }
+  .hero-sub strong { color: var(--text); font-weight: 600; }
+  .hero-actions {
+    position: relative; z-index: 1;
+    display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center;
+  }
+  .btn-primary {
+    padding: .75rem 2rem; font-size: .95rem; font-weight: 600;
+    background: linear-gradient(135deg, var(--purple), #6d28d9);
+    color: #fff; border-radius: var(--r); text-decoration: none;
+    box-shadow: 0 0 32px rgba(139,92,246,0.35);
+    transition: box-shadow .2s, transform .15s;
+  }
+  .btn-primary:hover { box-shadow: 0 0 48px rgba(139,92,246,0.55); transform: translateY(-1px); }
+  .btn-secondary {
+    padding: .75rem 2rem; font-size: .95rem; font-weight: 600;
+    color: var(--text-dim); border: 1px solid var(--border-hi);
+    border-radius: var(--r); text-decoration: none; background: transparent;
+    transition: color .2s, border-color .2s, background .2s;
+  }
+  .btn-secondary:hover { color: var(--text); border-color: var(--violet); background: rgba(139,92,246,0.08); }
+
+  /* ── SHARED SECTION ── */
+  section { padding: 6rem 1.5rem; }
+  .container { max-width: 1100px; margin: 0 auto; }
+  .section-label {
+    font-size: .78rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase;
+    color: var(--purple); margin-bottom: .9rem;
+  }
+  .section-title {
+    font-size: clamp(1.8rem, 4vw, 2.8rem); font-weight: 800;
+    line-height: 1.12; letter-spacing: -.025em; color: var(--text);
+    margin-bottom: 1rem;
+  }
+  .section-title .accent { color: var(--violet); }
+  .section-body {
+    font-size: 1.08rem; color: var(--text-dim); max-width: 640px; line-height: 1.75;
+  }
+  .divider { border: none; border-top: 1px solid var(--border); margin: 0; }
+
+  /* ── LOOP SECTION ── */
+  #pipeline { background: var(--bg-2); }
+  .loop-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 4rem; align-items: start; margin-top: 4rem;
+  }
+  @media (max-width: 768px) { .loop-grid { grid-template-columns: 1fr; } }
+  .loop-steps { display: flex; flex-direction: column; gap: 0; }
+  .loop-step {
+    display: flex; gap: 1.2rem; padding: 1.5rem 0;
+    border-bottom: 1px solid var(--border);
+    position: relative;
+  }
+  .loop-step:last-child { border-bottom: none; }
+  .step-num {
+    flex-shrink: 0; width: 32px; height: 32px;
+    border-radius: 50%; border: 1px solid var(--border-hi);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .78rem; font-weight: 700; color: var(--violet);
+    background: rgba(139,92,246,0.1); margin-top: .1rem;
+  }
+  .step-content h4 {
+    font-size: .95rem; font-weight: 700; color: var(--text); margin-bottom: .3rem;
+  }
+  .step-content p { font-size: .88rem; color: var(--text-dim); line-height: 1.6; }
+  .step-tag {
+    display: inline-block; font-size: .7rem; font-weight: 600;
+    padding: .15rem .55rem; border-radius: 4px; margin-top: .45rem;
+  }
+  .tag-purple { background: rgba(139,92,246,0.15); color: var(--violet); }
+  .tag-teal   { background: rgba(45,212,191,0.12);  color: var(--teal); }
+  .tag-blue   { background: rgba(96,165,250,0.12);  color: var(--blue); }
+
+  /* loop diagram */
+  .loop-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px; padding: 2rem;
+    position: sticky; top: 72px;
+  }
+  .loop-diagram h4 {
+    font-size: .78rem; font-weight: 600; letter-spacing: .12em; text-transform: uppercase;
+    color: var(--text-dim); margin-bottom: 1.5rem;
+  }
+  .ld-flow {
+    display: flex; flex-direction: column; gap: .3rem;
+    font-size: .85rem;
+  }
+  .ld-node {
+    display: flex; align-items: center; gap: .75rem;
+    padding: .65rem .85rem; border-radius: 8px;
+  }
+  .ld-node.phase-rollout { background: rgba(96,165,250,0.08); border: 1px solid rgba(96,165,250,0.2); }
+  .ld-node.phase-wiki    { background: rgba(139,92,246,0.08); border: 1px solid rgba(139,92,246,0.2); }
+  .ld-node.phase-skill   { background: rgba(45,212,191,0.07); border: 1px solid rgba(45,212,191,0.2); }
+  .ld-node.phase-gate    { background: rgba(251,191,36,0.07);  border: 1px solid rgba(251,191,36,0.2); }
+  .ld-dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+  }
+  .ld-node.phase-rollout .ld-dot { background: var(--blue); }
+  .ld-node.phase-wiki    .ld-dot { background: var(--violet); }
+  .ld-node.phase-skill   .ld-dot { background: var(--teal); }
+  .ld-node.phase-gate    .ld-dot { background: #fbbf24; }
+  .ld-node span { color: var(--text); flex: 1; }
+  .ld-node small { color: var(--text-dim); font-size: .78rem; }
+  .ld-arrow {
+    padding-left: 1.6rem; color: var(--border-hi); font-size: .78rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .ld-arrow::before { content: '↓'; }
+  .invariant-box {
+    margin-top: 1.4rem; padding: .9rem 1rem;
+    background: rgba(45,212,191,0.06); border: 1px solid rgba(45,212,191,0.2);
+    border-radius: 8px; font-size: .82rem; color: var(--teal); line-height: 1.6;
+  }
+  .invariant-box strong { color: var(--teal); }
+
+  /* ── ARCHITECTURE ── */
+  #studio { background: var(--bg); }
+  .arch-grid {
+    display: grid; grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem; margin-top: 3.5rem;
+  }
+  @media (max-width: 900px) { .arch-grid { grid-template-columns: 1fr; } }
+  .arch-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 2rem;
+    transition: border-color .25s, transform .2s, box-shadow .2s;
+    position: relative; overflow: hidden;
+  }
+  .arch-card:hover {
+    border-color: var(--border-hi); transform: translateY(-3px);
+    box-shadow: 0 12px 40px rgba(0,0,0,.35);
+  }
+  .arch-card::before {
+    content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px;
+  }
+  .arch-card.card-daemon::before  { background: linear-gradient(90deg, var(--blue), var(--purple)); }
+  .arch-card.card-core::before   { background: linear-gradient(90deg, var(--purple), var(--teal)); }
+  .arch-card.card-cockpit::before { background: linear-gradient(90deg, var(--teal), var(--blue)); }
+  .arch-icon {
+    width: 44px; height: 44px; border-radius: 10px; margin-bottom: 1.2rem;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .icon-blue   { background: rgba(96,165,250,0.12);  color: var(--blue); }
+  .icon-purple { background: rgba(139,92,246,0.12); color: var(--purple); }
+  .icon-teal   { background: rgba(45,212,191,0.1);  color: var(--teal); }
+  .arch-name { font-size: .78rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--text-dim); margin-bottom: .5rem; }
+  .arch-title { font-size: 1.3rem; font-weight: 700; color: var(--text); margin-bottom: .8rem; }
+  .arch-desc { font-size: .9rem; color: var(--text-dim); line-height: 1.65; }
+  .arch-tags { display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1.2rem; }
+  .arch-tag {
+    font-size: .72rem; font-weight: 600; padding: .2rem .65rem;
+    border-radius: 4px; border: 1px solid;
+  }
+  .arch-tag.blue   { color: var(--blue);   border-color: rgba(96,165,250,0.3);  background: rgba(96,165,250,0.06);  }
+  .arch-tag.purple { color: var(--violet); border-color: rgba(139,92,246,0.3); background: rgba(139,92,246,0.06); }
+  .arch-tag.teal   { color: var(--teal);   border-color: rgba(45,212,191,0.3);  background: rgba(45,212,191,0.06);  }
+
+  /* ── SKILLS ── */
+  #cut { background: var(--bg-2); }
+  .skills-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 2rem; margin-top: 3.5rem;
+  }
+  @media (max-width: 768px) { .skills-grid { grid-template-columns: 1fr; } }
+  .skill-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.75rem;
+  }
+  .skill-card h3 { font-size: 1.05rem; font-weight: 700; color: var(--text); margin-bottom: .6rem; }
+  .skill-card p { font-size: .88rem; color: var(--text-dim); line-height: 1.65; }
+  .metric-row {
+    display: flex; gap: 1rem; margin-top: 1.2rem; flex-wrap: wrap;
+  }
+  .metric {
+    flex: 1; min-width: 100px; background: var(--bg-3);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: .9rem 1rem; text-align: center;
+  }
+  .metric-val {
+    font-size: 1.5rem; font-weight: 800; color: var(--violet);
+    display: block; margin-bottom: .2rem;
+  }
+  .metric-lbl { font-size: .75rem; color: var(--text-dim); }
+
+  /* impact entry */
+  .impact-entry {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.3rem 1.5rem; font-size: .83rem;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    color: var(--text-dim); line-height: 1.8;
+    grid-column: 1 / -1;
+  }
+  .impact-entry .kw  { color: var(--violet); }
+  .impact-entry .ok  { color: var(--teal); }
+  .impact-entry .bad { color: #f87171; }
+  .impact-entry .num { color: var(--blue); }
+  .impact-entry .cmt { color: #4c5566; }
+
+  /* ── VAULT ── */
+  #project { background: var(--bg); }
+  .vault-grid {
+    display: grid; grid-template-columns: 1fr 1.3fr;
+    gap: 4rem; align-items: center; margin-top: 3.5rem;
+  }
+  @media (max-width: 768px) { .vault-grid { grid-template-columns: 1fr; } }
+  .vault-tree {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: .84rem; line-height: 1.9;
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.6rem;
+    color: var(--text-dim);
+  }
+  .vault-tree .dir  { color: var(--blue); }
+  .vault-tree .file { color: var(--text-dim); }
+  .vault-tree .hl   { color: var(--violet); font-weight: 700; }
+  .vault-tree .dim  { color: #3a3a55; }
+  .vault-features { display: flex; flex-direction: column; gap: 1.4rem; }
+  .vault-feature h4 {
+    font-size: .95rem; font-weight: 700; color: var(--text); margin-bottom: .35rem;
+    display: flex; align-items: center; gap: .6rem;
+  }
+  .vault-feature p { font-size: .88rem; color: var(--text-dim); line-height: 1.65; padding-left: 1.6rem; }
+  .feat-icon {
+    width: 22px; height: 22px; border-radius: 5px;
+    display: inline-flex; align-items: center; justify-content: center;
+    font-size: .8rem;
+  }
+
+  /* ── PROVIDERS ── */
+  #tools { background: var(--bg-2); }
+  .providers-table-wrap {
+    overflow-x: auto; margin-top: 3rem;
+    border: 1px solid var(--border); border-radius: 12px;
+  }
+  table {
+    width: 100%; border-collapse: collapse; font-size: .88rem;
+  }
+  thead th {
+    padding: .9rem 1.3rem; text-align: left;
+    font-size: .75rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--text-dim); background: rgba(255,255,255,.025);
+    border-bottom: 1px solid var(--border);
+  }
+  tbody td {
+    padding: .85rem 1.3rem;
+    border-bottom: 1px solid var(--border);
+    color: var(--text-dim); vertical-align: middle;
+  }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: rgba(255,255,255,.018); }
+  .role-badge {
+    display: inline-block; font-size: .75rem; font-weight: 600;
+    padding: .22rem .7rem; border-radius: 5px;
+  }
+
+  /* ── QUICKSTART ── */
+  #quickstart { background: var(--bg-3); }
+  .qs-steps {
+    display: grid; grid-template-columns: repeat(2, 1fr);
+    gap: 2rem; margin-top: 3.5rem;
+  }
+  @media (max-width: 768px) { .qs-steps { grid-template-columns: 1fr; } }
+  .qs-step {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 1.6rem;
+  }
+  .qs-num {
+    font-size: .72rem; font-weight: 700; letter-spacing: .12em;
+    color: var(--purple); text-transform: uppercase; margin-bottom: .5rem;
+    display: flex; align-items: center; gap: .5rem;
+  }
+  .qs-num::before {
+    content: attr(data-n);
+    width: 20px; height: 20px; border-radius: 50%;
+    background: rgba(139,92,246,0.15); border: 1px solid rgba(139,92,246,0.3);
+    display: flex; align-items: center; justify-content: center;
+    font-size: .7rem; font-weight: 800; color: var(--violet);
+    flex-shrink: 0;
+  }
+  .qs-step h4 { font-size: 1rem; font-weight: 700; color: var(--text); margin-bottom: .6rem; }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 8px; padding: .95rem 1.1rem; overflow-x: auto;
+    font-size: .82rem;
+    font-family: 'JetBrains Mono', 'Fira Code', monospace;
+    line-height: 1.7; color: var(--slate); margin-top: .7rem;
+  }
+  pre .cmd { color: var(--teal); }
+  pre .cmt { color: #4c5566; }
+  .qs-note { font-size: .82rem; color: var(--text-dim); margin-top: .6rem; line-height: 1.6; }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--bg); border-top: 1px solid var(--border);
+    padding: 3rem 1.5rem 2.5rem;
+    text-align: center;
+  }
+  .footer-logo { font-size: 1.3rem; font-weight: 800; letter-spacing: .02em; margin-bottom: .5rem; }
+  .footer-logo .g { color: var(--violet); }
+  .footer-sub { font-size: .85rem; color: var(--text-dim); max-width: 400px; margin: 0 auto 1.5rem; line-height: 1.65; }
+  .footer-links { display: flex; justify-content: center; gap: 2rem; flex-wrap: wrap; }
+  .footer-links a { font-size: .85rem; color: var(--text-dim); text-decoration: none; transition: color .2s; }
+  .footer-links a:hover { color: var(--violet); }
+  .footer-copy { font-size: .78rem; color: #3a3a55; margin-top: 2rem; }
+  /* ── lengthy-edit additions ── */
+  .vault-tree { white-space: pre; overflow-x: auto; }
+  .qs-step { min-width: 0; }
+  code {
+    font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: .85em;
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 4px; padding: .05rem .35rem;
+  }
+  .tag-amber { background: rgba(251,191,36,0.12); color: #fbbf24; }
+  .tag-rose  { background: rgba(244,114,182,0.12); color: #f472b6; }
+  .ld-node.phase-manual .ld-dot { background: #f472b6; }
+  .ld-node.phase-manual { background: rgba(244,114,182,0.07); border: 1px solid rgba(244,114,182,0.2); }
+
+  /* timeline strip in #cut */
+  .tl-wrap {
+    grid-column: 1 / -1; background: var(--code-bg); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.3rem 1.5rem;
+  }
+  .tl-head { display: flex; justify-content: space-between; font-size: .75rem; color: var(--text-dim);
+    font-family: 'JetBrains Mono', 'Fira Code', monospace; margin-bottom: .7rem; }
+  .tl-secs { position: relative; height: 18px; margin-bottom: .35rem; }
+  .tl-secs span { position: absolute; top: 0; font-size: .68rem; font-weight: 600; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--text-dim); border-left: 1px solid var(--border-hi); padding-left: .35rem; }
+  .tl { display: flex; height: 46px; border-radius: 6px; overflow: hidden; gap: 2px; }
+  .tl i { display: block; height: 100%; border-radius: 3px; opacity: .85; }
+  .tl i.still  { background: linear-gradient(180deg, rgba(96,165,250,.55), rgba(96,165,250,.25)); }
+  .tl i.loop   { background: linear-gradient(180deg, rgba(139,92,246,.6), rgba(139,92,246,.25)); }
+  .tl i.motion { background: linear-gradient(180deg, rgba(45,212,191,.55), rgba(45,212,191,.2)); }
+  .tl i.title  { background: linear-gradient(180deg, rgba(251,191,36,.55), rgba(251,191,36,.2)); }
+  .tl i.ph     { background: repeating-linear-gradient(45deg, rgba(148,163,184,.18) 0 6px, rgba(148,163,184,.06) 6px 12px); }
+  .tl-wave { height: 34px; margin-top: .5rem; width: 100%; display: block; }
+  .tl-legend { display: flex; gap: 1.2rem; flex-wrap: wrap; margin-top: .8rem; font-size: .75rem; color: var(--text-dim); }
+  .tl-legend b { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: .35rem; vertical-align: -1px; }
+
+  .ref-card { margin-top: 2.5rem; display: flex; gap: 1.5rem; align-items: center; flex-wrap: wrap;
+    background: var(--surface); border: 1px solid var(--border); border-radius: 12px; padding: 1.2rem 1.4rem; }
+  .ref-card img { width: 320px; max-width: 100%; border-radius: 8px; border: 1px solid var(--border); }
+  .ref-card p { flex: 1; min-width: 240px; font-size: .9rem; color: var(--text-dim); line-height: 1.7; }
+  .ref-card a { color: var(--violet); }
+  @media (max-width: 860px) { .nav-links { display: none; } }
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <a class="nav-logo" href="#">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none" aria-hidden="true">
+      <rect x="2.5" y="5" width="17" height="12" rx="2" stroke="#8b5cf6" stroke-width="1.5"/>
+      <rect x="5" y="8" width="3" height="6" rx=".6" fill="rgba(96,165,250,0.55)"/>
+      <rect x="9.5" y="8" width="5" height="6" rx=".6" fill="rgba(139,92,246,0.55)"/>
+      <rect x="16" y="8" width="1.5" height="6" rx=".6" fill="rgba(45,212,191,0.6)"/>
+    </svg>
+    lengthy-edit
+  </a>
+  <ul class="nav-links">
+    <li><a href="#pipeline">Pipeline</a></li>
+    <li><a href="#studio">Studio</a></li>
+    <li><a href="#cut">The cut</a></li>
+    <li><a href="#project">Projects</a></li>
+    <li><a href="#tools">Tools</a></li>
+    <li><a href="#quickstart">Setup</a></li>
+  </ul>
+  <div class="nav-right">
+    <div class="gh-stats">
+      <a class="gh-stat" href="https://github.com/ipattis/lengthy_edit/stargazers" target="_blank" rel="noopener noreferrer" aria-label="GitHub stars">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 .25a.75.75 0 01.673.418l1.882 3.815 4.21.612a.75.75 0 01.416 1.279l-3.046 2.97.719 4.192a.75.75 0 01-1.088.791L8 12.347l-3.766 1.98a.75.75 0 01-1.088-.79l.72-4.194L.818 6.374a.75.75 0 01.416-1.28l4.21-.611L7.327.668A.75.75 0 018 .25z"/></svg>
+        <span id="star-count">—</span>
+      </a>
+      <a class="gh-stat" href="https://github.com/ipattis/lengthy_edit/fork" target="_blank" rel="noopener noreferrer" aria-label="GitHub forks">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M5 3.25a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm0 2.122a2.25 2.25 0 10-1.5 0v.878A2.25 2.25 0 005.75 8.5h1.5v2.128a2.251 2.251 0 101.5 0V8.5h1.5a2.25 2.25 0 002.25-2.25v-.878a2.25 2.25 0 10-1.5 0v.878a.75.75 0 01-.75.75h-4.5A.75.75 0 015 6.25v-.878zm3.75 7.378a.75.75 0 11-1.5 0 .75.75 0 011.5 0zm3-8.75a.75.75 0 100-1.5.75.75 0 000 1.5z"/></svg>
+        <span id="fork-count">—</span>
+      </a>
+      <a class="gh-link" href="https://github.com/ipattis/lengthy_edit" target="_blank" rel="noopener noreferrer" aria-label="GitHub repository">
+        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+      </a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero">
+  <canvas id="hero-canvas"></canvas>
+  <span class="hero-label">AI music-film studio · runs locally</span>
+  <h1 class="hero-title">Song-length films,<br>cut to the music.</h1>
+  <p class="hero-sub">
+    <strong>lengthy-edit</strong> takes one idea from brief to finished film:
+    Claude writes the research, lyrics, storyboard, prompts and sound layer; Suno, Midjourney and
+    <strong>Seedance</strong> make the media; ffmpeg cuts every shot to the song.
+  </p>
+  <div class="hero-actions">
+    <a class="btn-primary" href="#quickstart">Get started</a>
+    <a class="btn-secondary" href="#pipeline">How it works →</a>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── PIPELINE ── -->
+<section id="pipeline">
+  <div class="container">
+    <div class="section-label">The workflow</div>
+    <h2 class="section-title">One brief. <span class="accent">Six stages.</span> A film.</h2>
+    <p class="section-body">
+      Each stage reads everything before it: the research shapes the lyrics, the song's
+      section timings shape the storyboard, and the shot list shapes the sound layer.
+      Every generated field stays editable, so you're directing, not just prompting.
+    </p>
+
+    <div class="loop-grid">
+      <div class="loop-steps">
+        <div class="loop-step">
+          <div class="step-num">1</div>
+          <div class="step-content">
+            <h4>Brief &amp; research</h4>
+            <p>Describe the concept, tone, visual and music style. Claude builds a research document with facts, emotional arc, visual motifs and a sound palette, using web search if you want it.</p>
+            <span class="step-tag tag-purple">Claude · web search</span>
+          </div>
+        </div>
+        <div class="loop-step">
+          <div class="step-num">2</div>
+          <div class="step-content">
+            <h4>Lyrics &amp; song</h4>
+            <p>Claude writes sectioned lyrics and a Suno "style of music" prompt. Paste them into Suno, upload your favourite take, then time each section by ear with <em>start = playhead</em>.</p>
+            <span class="step-tag tag-purple">Claude</span> <span class="step-tag tag-rose">Suno · manual</span>
+          </div>
+        </div>
+        <div class="loop-step">
+          <div class="step-num">3</div>
+          <div class="step-content">
+            <h4>Storyboard</h4>
+            <p>A shot list that covers the whole song, cutting on phrase boundaries. Every shot has a type (still, loop, motion or title), a Midjourney prompt, a motion prompt and the lyric it lands on.</p>
+            <span class="step-tag tag-purple">Claude · structured output</span>
+          </div>
+        </div>
+        <div class="loop-step">
+          <div class="step-num">4</div>
+          <div class="step-content">
+            <h4>Stills, loops &amp; motion</h4>
+            <p>Copy prompts into Midjourney and upload stills and loops. One click animates a still with Seedance 2.0, then polls until the clip is ready and downloads it into the project.</p>
+            <span class="step-tag tag-rose">Midjourney · manual</span> <span class="step-tag tag-teal">Seedance · Higgsfield API</span>
+          </div>
+        </div>
+        <div class="loop-step">
+          <div class="step-num">5</div>
+          <div class="step-content">
+            <h4>Sound layer</h4>
+            <p>Claude places ambiences, foley, risers and hits at exact times, kept sparse so vocals stay clear. Attach a file to each cue and set its gain.</p>
+            <span class="step-tag tag-purple">Claude</span> <span class="step-tag tag-rose">your library</span>
+          </div>
+        </div>
+        <div class="loop-step">
+          <div class="step-num">6</div>
+          <div class="step-content">
+            <h4>Render</h4>
+            <p>ffmpeg turns each shot into a segment of exact length: stills get a slow push-in, loops repeat to fill the shot, and title cards fade in and out. Then it joins the segments and mixes the song with the cues.</p>
+            <span class="step-tag tag-blue">ffmpeg · cached segments</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="loop-diagram">
+        <h4>What runs where</h4>
+        <div class="ld-flow">
+          <div class="ld-node phase-wiki"><div class="ld-dot"></div><span>Research</span><small>Claude + search</small></div>
+          <div class="ld-arrow">dossier</div>
+          <div class="ld-node phase-wiki"><div class="ld-dot"></div><span>Lyrics + style</span><small>Claude</small></div>
+          <div class="ld-arrow">paste</div>
+          <div class="ld-node phase-manual"><div class="ld-dot"></div><span>Song</span><small>Suno → upload</small></div>
+          <div class="ld-arrow">section timings</div>
+          <div class="ld-node phase-wiki"><div class="ld-dot"></div><span>Storyboard</span><small>Claude</small></div>
+          <div class="ld-arrow">prompts</div>
+          <div class="ld-node phase-manual"><div class="ld-dot"></div><span>Stills &amp; loops</span><small>Midjourney → upload</small></div>
+          <div class="ld-arrow">image-to-video</div>
+          <div class="ld-node phase-skill"><div class="ld-dot"></div><span>Motion shots</span><small>Seedance API</small></div>
+          <div class="ld-arrow">cue sheet</div>
+          <div class="ld-node phase-wiki"><div class="ld-dot"></div><span>Sound layer</span><small>Claude</small></div>
+          <div class="ld-arrow">mix + cut</div>
+          <div class="ld-node phase-gate"><div class="ld-dot"></div><span>Film</span><small>ffmpeg</small></div>
+        </div>
+        <div class="invariant-box">
+          <strong>Animatic at any stage:</strong> shots without media render as labelled placeholder
+          cards, so you can watch the cut against the song before a single image exists.
+        </div>
+      </div>
+    </div>
+
+    <div class="ref-card">
+      <img src="workflow-reference.png" alt="Comment listing the tools used to make Working as Intended: Claude, Midjourney, Suno, Seedance via Higgsfield">
+      <p>Modelled on the workflow behind
+        <a href="https://www.youtube.com/watch?v=Z6_ENp_fO_Y" target="_blank" rel="noopener noreferrer"><em>Working as Intended</em></a>:
+        Claude for research, lyrics, storyboard, prompts and the sound layer; Midjourney for images
+        and moving loops; Suno for the song; Seedance for motion shots through Higgsfield's API.
+        lengthy-edit turns that list into one repeatable workspace.</p>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── STUDIO ── -->
+<section id="studio">
+  <div class="container">
+    <div class="section-label">The studio</div>
+    <h2 class="section-title">A local web app.<br><span class="accent">Three engines</span> behind it.</h2>
+    <p class="section-body">
+      <code>lengthy-edit serve</code> opens a single-page studio on <code>127.0.0.1</code>. There's no
+      build step and no account; your keys stay in a local <code>.env</code>.
+    </p>
+    <div class="arch-grid">
+      <div class="arch-card card-core">
+        <div class="arch-icon icon-purple">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8z"/></svg>
+        </div>
+        <div class="arch-name">Writers' room</div>
+        <div class="arch-title">Claude stages</div>
+        <p class="arch-desc">Research, lyrics, storyboard and sound cues come back as schema-validated JSON, so they fill the editor directly. Add a director's note to any shot and Claude revises just that shot, keeping the film's look.</p>
+        <div class="arch-tags"><span class="arch-tag purple">claude-opus-5-5</span><span class="arch-tag purple">adaptive thinking</span><span class="arch-tag purple">refusal fallback</span></div>
+      </div>
+      <div class="arch-card card-cockpit">
+        <div class="arch-icon icon-teal">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M10 9.5v5l4-2.5z" fill="currentColor"/></svg>
+        </div>
+        <div class="arch-name">Art department</div>
+        <div class="arch-title">Media hand-off</div>
+        <p class="arch-desc">Copy prompts one at a time, all at once, or as <code>prompts.csv</code>. Upload stills and loops per shot. Motion shots go to Seedance in one click (or "all missing") and download as they finish.</p>
+        <div class="arch-tags"><span class="arch-tag teal">Seedance 2.0</span><span class="arch-tag teal">Midjourney</span><span class="arch-tag teal">Suno</span></div>
+      </div>
+      <div class="arch-card card-daemon">
+        <div class="arch-icon icon-blue">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M4 7h16M4 12h10M4 17h13"/><circle cx="18" cy="12" r="2"/></svg>
+        </div>
+        <div class="arch-name">Edit suite</div>
+        <div class="arch-title">ffmpeg renderer</div>
+        <p class="arch-desc">Shots are encoded at exact length, matched to your resolution and frame rate, and cached by content. Re-rendering a three-minute edit only re-encodes the shots you changed.</p>
+        <div class="arch-tags"><span class="arch-tag blue">H.264 · AAC</span><span class="arch-tag blue">segment cache</span><span class="arch-tag blue">headless CLI</span></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── THE CUT ── -->
+<section id="cut">
+  <div class="container">
+    <div class="section-label">The cut</div>
+    <h2 class="section-title">Every shot lives <span class="accent">on the song.</span></h2>
+    <p class="section-body">
+      Shots cover the whole song with no gaps. Change one shot's length and the rest shift to fit;
+      <em>Fit to song</em> re-tiles them and stretches the last shot to the song's end. Motion shots
+      are kept to Seedance's 4–15 second range.
+    </p>
+    <div class="skills-grid">
+      <div class="tl-wrap">
+        <div class="tl-head"><span>0:00</span><span>timeline · 34 shots · faded = not yet generated</span><span>3:28</span></div>
+        <div class="tl-secs">
+          <span style="left:0%">Intro</span><span style="left:9%">Verse 1</span><span style="left:30%">Chorus</span>
+          <span style="left:45%">Verse 2</span><span style="left:63%">Chorus</span><span style="left:78%">Bridge</span><span style="left:90%">Outro</span>
+        </div>
+        <div class="tl" id="tl"></div>
+        <svg class="tl-wave" id="wave" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <div class="tl-legend">
+          <span><b style="background:rgba(96,165,250,.6)"></b>still · push-in</span>
+          <span><b style="background:rgba(139,92,246,.65)"></b>loop</span>
+          <span><b style="background:rgba(45,212,191,.6)"></b>motion · Seedance</span>
+          <span><b style="background:rgba(251,191,36,.6)"></b>title card</span>
+          <span><b style="background:rgba(148,163,184,.25)"></b>placeholder</span>
+        </div>
+      </div>
+      <div class="skill-card">
+        <h3>Stills that move</h3>
+        <p>Midjourney stills get a slow, centred push-in, scaled up first so the move doesn't jitter. Turn it off per shot for a locked-off frame.</p>
+      </div>
+      <div class="skill-card">
+        <h3>Loops that fill</h3>
+        <p>Moving loops repeat to fill their shot exactly and are cropped to the frame. Seedance clips are trimmed to the timeline, not the other way round.</p>
+      </div>
+      <div class="skill-card">
+        <h3>Type as motion design</h3>
+        <p>Title shots render locally as typographic cards with fades. Put the words in <code>on_screen_text</code>; there's no external tool to call.</p>
+      </div>
+      <div class="skill-card">
+        <h3>Sound under the song</h3>
+        <p>Each cue is trimmed, faded out, gain-staged and placed at its exact time, then mixed with the song at full level (no normalisation) and cut to the film's length.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── PROJECT ── -->
+<section id="project">
+  <div class="container">
+    <div class="section-label">Projects</div>
+    <h2 class="section-title">One folder.<br><span class="accent">One JSON file.</span> All of it.</h2>
+    <p class="section-body">
+      A project is a plain folder. Its text, timings, prompts and media links live in one
+      <code>project.json</code> you can diff, back up or edit by hand. Media sits alongside it and
+      stays out of git by default.
+    </p>
+    <div class="vault-grid">
+      <div class="vault-tree">
+<span class="dir">projects/working-as-intended/</span>
+<span class="dim">├── </span><span class="hl">project.json</span><span class="file">     text, timings, prompts</span>
+<span class="dim">├── </span><span class="dir">song/</span><span class="file">            the Suno take</span>
+<span class="dim">├── </span><span class="dir">shots/</span>
+<span class="dim">│   ├── </span><span class="dir">s001/</span><span class="file">        image-….png</span>
+<span class="dim">│   ├── </span><span class="dir">s014/</span><span class="file">        seedance-….mp4</span>
+<span class="dim">│   └── </span><span class="dir">…</span>
+<span class="dim">├── </span><span class="dir">sound/</span><span class="file">           one file per cue</span>
+<span class="dim">└── </span><span class="dir">renders/</span>
+<span class="dim">    ├── </span><span class="hl">…-animatic-….mp4</span>
+<span class="dim">    ├── </span><span class="hl">….mp4</span><span class="file">            final cuts</span>
+<span class="dim">    └── </span><span class="dir">segments/</span><span class="file">    per-shot cache</span>
+      </div>
+      <div class="vault-features">
+        <div class="vault-feature">
+          <h4><span class="feat-icon" style="background:rgba(139,92,246,0.15);color:#a78bfa;">⬡</span> Editable at every step</h4>
+          <p>Regenerate a stage or rewrite it by hand. Shot edits save as you leave a field; the other stages have a Save button. Background refreshes never wipe a field you're typing in.</p>
+        </div>
+        <div class="vault-feature">
+          <h4><span class="feat-icon" style="background:rgba(45,212,191,0.1);color:#2dd4bf;">↓</span> Nothing expires</h4>
+          <p>Higgsfield deletes outputs after about seven days, so Seedance clips are downloaded into the project as soon as they finish.</p>
+        </div>
+        <div class="vault-feature">
+          <h4><span class="feat-icon" style="background:rgba(96,165,250,0.12);color:#60a5fa;">▶</span> Headless when you want it</h4>
+          <p><code>lengthy-edit render &lt;slug&gt;</code> renders without the UI, which is handy for long final renders or scripted runs.</p>
+        </div>
+        <div class="vault-feature">
+          <h4><span class="feat-icon" style="background:rgba(251,191,36,0.1);color:#fbbf24;">⌂</span> Local and single-user</h4>
+          <p>Binds to <code>127.0.0.1</code> with no login. Uploaded files can't be written or read outside their project folder.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── TOOLS ── -->
+<section id="tools">
+  <div class="container">
+    <div class="section-label">Integrations</div>
+    <h2 class="section-title">What's an API call,<br><span class="accent">what's a hand-off.</span></h2>
+    <p class="section-body">
+      Midjourney and Suno have no official public APIs, so lengthy-edit gives you the prompt to
+      copy and takes the result back as an upload. Everything else is wired in.
+    </p>
+    <div class="providers-table-wrap">
+      <table>
+        <thead><tr><th>Stage</th><th>Tool</th><th>Integration</th><th>Needs</th></tr></thead>
+        <tbody>
+          <tr><td>Research, lyrics, storyboard, sound, refine</td><td>Claude</td><td><span class="role-badge tag-purple">API</span></td><td><code>ANTHROPIC_API_KEY</code> or <code>ant auth login</code></td></tr>
+          <tr><td>Motion shots</td><td>Seedance 2.0 via Higgsfield</td><td><span class="role-badge tag-teal">API</span></td><td><code>HF_API_KEY_ID</code> · <code>HF_API_KEY_SECRET</code></td></tr>
+          <tr><td>Song</td><td>Suno</td><td><span class="role-badge tag-rose">copy → upload</span></td><td>a Suno account</td></tr>
+          <tr><td>Stills &amp; loops</td><td>Midjourney</td><td><span class="role-badge tag-rose">copy → upload</span></td><td>a Midjourney account</td></tr>
+          <tr><td>Sound files</td><td>your library / foley / any generator</td><td><span class="role-badge tag-rose">upload</span></td><td>—</td></tr>
+          <tr><td>Cut &amp; mix</td><td>ffmpeg</td><td><span class="role-badge tag-blue">local</span></td><td><code>ffmpeg</code> on <code>PATH</code></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<hr class="divider">
+
+<!-- ── QUICKSTART ── -->
+<section id="quickstart">
+  <div class="container">
+    <div class="section-label">Setup</div>
+    <h2 class="section-title">From clone to <span class="accent">first animatic</span></h2>
+    <p class="section-body">Python 3.10+ and ffmpeg. Claude and Higgsfield keys switch on the generation stages.</p>
+    <div class="qs-steps">
+      <div class="qs-step">
+        <div class="qs-num" data-n="1">Install</div>
+        <h4>Clone and install</h4>
+<pre><span class="cmd">git clone</span> https://github.com/ipattis/lengthy_edit.git
+<span class="cmd">cd</span> lengthy_edit
+<span class="cmd">python3 -m venv</span> .venv <span class="cmt">&amp;&amp;</span> <span class="cmd">source</span> .venv/bin/activate
+<span class="cmd">pip install</span> -e <span class="cmt">".[dev]"</span></pre>
+        <p class="qs-note">Need ffmpeg? <code>brew install ffmpeg</code></p>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num" data-n="2">Configure</div>
+        <h4>Add your keys</h4>
+<pre><span class="cmd">cp</span> .env.example .env
+<span class="cmt"># ANTHROPIC_API_KEY=…       Claude stages</span>
+<span class="cmt"># HF_API_KEY_ID=…           Seedance (optional)</span>
+<span class="cmt"># HF_API_KEY_SECRET=…</span></pre>
+        <p class="qs-note">Real environment variables override <code>.env</code>. The studio's sidebar shows which services are connected.</p>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num" data-n="3">Run</div>
+        <h4>Open the studio</h4>
+<pre><span class="cmd">lengthy-edit serve</span>                 <span class="cmt"># http://127.0.0.1:8765</span>
+<span class="cmd">lengthy-edit serve</span> --home ~/Films  <span class="cmt"># projects elsewhere</span></pre>
+        <p class="qs-note">Create a project, fill in the brief, and work through the tabs from left to right.</p>
+      </div>
+      <div class="qs-step">
+        <div class="qs-num" data-n="4">Render</div>
+        <h4>Cut from the terminal</h4>
+<pre><span class="cmd">lengthy-edit list</span>
+<span class="cmd">lengthy-edit render</span> working-as-intended
+<span class="cmd">pytest</span>                             <span class="cmt"># offline tests, no API calls</span></pre>
+        <p class="qs-note">Every Claude generation and Seedance shot is a paid API call. Renders are free.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-logo">lengthy<span class="g">·</span>edit</div>
+  <p class="footer-sub">
+    A local studio for song-length AI music films: written with Claude, made with Suno,
+    Midjourney and Seedance, cut with ffmpeg.
+  </p>
+  <div class="footer-links">
+    <a href="https://github.com/ipattis/lengthy_edit">GitHub</a>
+    <a href="https://github.com/ipattis/lengthy_edit#readme">README</a>
+    <a href="https://www.youtube.com/watch?v=Z6_ENp_fO_Y">Working as Intended</a>
+    <a href="https://docs.higgsfield.ai">Higgsfield API</a>
+  </div>
+  <p class="footer-copy">MIT License</p>
+</footer>
+
+<script>
+// ── hero particle canvas (Cairn's), with a faint waveform along the bottom ──
+const canvas = document.getElementById('hero-canvas');
+const ctx = canvas.getContext('2d');
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function resize() {
+  canvas.width  = canvas.offsetWidth;
+  canvas.height = canvas.offsetHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const NUM_NODES = 55;
+const nodes = Array.from({length: NUM_NODES}, () => ({
+  x: Math.random(),
+  y: Math.random(),
+  vx: (Math.random() - .5) * .00018,
+  vy: (Math.random() - .5) * .00018,
+  r: Math.random() * 2.2 + 1.2,
+  pulse: Math.random() * Math.PI * 2,
+  speed: Math.random() * .02 + .012,
+}));
+
+const COLORS = ['#8b5cf6','#a78bfa','#60a5fa','#2dd4bf','#7c3aed'];
+
+let frame = 0;
+function draw() {
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  frame++;
+  for (const n of nodes) {
+    n.x += n.vx; n.y += n.vy;
+    if (n.x < 0) n.x = 1; if (n.x > 1) n.x = 0;
+    if (n.y < 0) n.y = 1; if (n.y > 1) n.y = 0;
+  }
+
+  // edges
+  for (let i = 0; i < nodes.length; i++) {
+    for (let j = i + 1; j < nodes.length; j++) {
+      const a = nodes[i], b = nodes[j];
+      const dx = (a.x - b.x) * W, dy = (a.y - b.y) * H;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      if (d < 170) {
+        ctx.beginPath();
+        ctx.moveTo(a.x * W, a.y * H);
+        ctx.lineTo(b.x * W, b.y * H);
+        ctx.strokeStyle = `rgba(139,92,246,${(1 - d/170) * 0.12})`;
+        ctx.lineWidth = .8;
+        ctx.stroke();
+      }
+    }
+  }
+
+  // nodes
+  for (let i = 0; i < nodes.length; i++) {
+    const n = nodes[i];
+    const pulsed = n.r + Math.sin(n.pulse + frame * n.speed) * .6;
+    const col = COLORS[i % COLORS.length];
+    ctx.beginPath();
+    ctx.arc(n.x * W, n.y * H, pulsed, 0, Math.PI * 2);
+    ctx.fillStyle = col + '55';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(n.x * W, n.y * H, pulsed * .55, 0, Math.PI * 2);
+    ctx.fillStyle = col + 'cc';
+    ctx.fill();
+  }
+
+  // waveform
+  const bars = Math.floor(W / 7), base = H - 40;
+  for (let i = 0; i < bars; i++) {
+    const t = i / bars;
+    const amp = (Math.sin(t * 22 + frame * .03) * .5 + .5) * (Math.sin(t * 5.3 - frame * .011) * .5 + .5);
+    const h = 4 + amp * 46;
+    ctx.fillStyle = `rgba(${t < .5 ? '139,92,246' : '45,212,191'},${.08 + amp * .14})`;
+    ctx.fillRect(i * 7, base - h, 3, h);
+  }
+
+  if (!reduceMotion) requestAnimationFrame(draw);
+}
+draw();
+
+// ── illustrative timeline + waveform in #cut ──
+(function () {
+  const kinds = ['title','still','loop','still','motion','still','loop','motion','still','motion','title',
+    'still','loop','motion','still','motion','still','loop','motion','title','still','motion','loop',
+    'still','motion','loop','still','motion','motion','loop','still','title','motion','still'];
+  const missing = new Set([5, 9, 16, 21, 24, 28, 33]);
+  document.getElementById('tl').innerHTML = kinds.map((k, i) => {
+    const w = k === 'motion' ? 5 + (i % 3) * 2 : k === 'title' ? 2 + (i % 2) : 3 + (i % 4);
+    return `<i class="${missing.has(i) ? 'ph' : k}" style="flex:${w}" title="s${String(i + 1).padStart(3, '0')} · ${k}"></i>`;
+  }).join('');
+  const svg = document.getElementById('wave'); let bars = '';
+  for (let i = 0; i < 220; i++) {
+    const t = i / 220;
+    const env = .35 + .65 * Math.abs(Math.sin(t * Math.PI * 3.2)) * (t > .28 && t < .44 || t > .6 && t < .76 ? 1 : .6);
+    const h = 4 + env * 26 * (.6 + .4 * Math.abs(Math.sin(i * 1.7)));
+    bars += `<rect x="${i * 5}" y="${(34 - h) / 2}" width="2.6" height="${h}" rx="1" fill="rgba(167,139,250,${.25 + env * .35})"/>`;
+  }
+  svg.setAttribute('viewBox', '0 0 1100 34'); svg.innerHTML = bars;
+})();
+
+// ── GitHub stats ──
+fetch('https://api.github.com/repos/ipattis/lengthy_edit')
+  .then(r => r.json())
+  .then(data => {
+    const stars = document.getElementById('star-count');
+    const forks = document.getElementById('fork-count');
+    if (stars && data.stargazers_count !== undefined) stars.textContent = data.stargazers_count;
+    if (forks && data.forks_count !== undefined) forks.textContent = data.forks_count;
+  })
+  .catch(() => {});
+
+// ── nav active state ──
+const sections = document.querySelectorAll('section[id]');
+const navLinks = document.querySelectorAll('.nav-links a');
+const io = new IntersectionObserver((entries) => {
+  for (const e of entries) {
+    if (e.isIntersecting) {
+      navLinks.forEach(l => {
+        l.style.color = l.getAttribute('href') === '#' + e.target.id ? 'var(--violet)' : '';
+      });
+    }
+  }
+}, {threshold: .3});
+sections.forEach(s => io.observe(s));
+</script>
+</body>
+</html>
